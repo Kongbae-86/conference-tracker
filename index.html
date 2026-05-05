@@ -556,6 +556,79 @@
     }
     .err-banner.on { display: block; }
 
+    /* ── Settings modal ──────────────────────────────────────── */
+    .setup-screen {
+      display: none; position: fixed; inset: 0;
+      background: var(--cream); z-index: 300;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .setup-screen.on { display: flex; }
+    .setup-box {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--rlg); box-shadow: var(--shadow-l);
+      width: 100%; max-width: 480px; padding: 32px;
+      text-align: center;
+    }
+    .setup-logo {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--orange) 0%, #b84400 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; margin: 0 auto 20px;
+    }
+    .setup-box h2 {
+      font-family: var(--serif); font-size: 1.5rem; font-weight: 400;
+      color: var(--ink); margin-bottom: 8px;
+    }
+    .setup-box p {
+      font-size: .84rem; color: var(--ink3); margin-bottom: 24px; line-height: 1.6;
+    }
+    .setup-box p a { color: var(--orange); }
+    .setup-field { display: flex; flex-direction: column; gap: 6px; text-align: left; margin-bottom: 16px; }
+    .setup-field label {
+      font-size: .69rem; font-weight: 600; color: var(--ink4);
+      text-transform: uppercase; letter-spacing: .07em;
+    }
+    .setup-field input {
+      background: var(--sand); border: 1px solid var(--border2);
+      border-radius: var(--r); color: var(--ink);
+      font-family: var(--sans); font-size: .84rem;
+      padding: 10px 12px; outline: none; width: 100%;
+      transition: border-color var(--ease), box-shadow var(--ease);
+    }
+    .setup-field input:focus {
+      border-color: var(--orange); background: var(--white);
+      box-shadow: 0 0 0 3px rgba(212,89,10,.1);
+    }
+    .setup-field input::placeholder { color: var(--ink4); font-size: .8rem; }
+    .setup-hint { font-size: .75rem; color: var(--ink4); margin-top: 4px; }
+
+    /* Settings icon button in header */
+    .btn-icon-hdr {
+      background: transparent; border: 1px solid var(--border2);
+      border-radius: var(--r); color: var(--ink4);
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .9rem; cursor: pointer;
+      transition: all var(--ease);
+    }
+    .btn-icon-hdr:hover { background: var(--sand); color: var(--ink); }
+    .btn-icon-hdr.active { background: var(--orange-l); border-color: var(--orange-m); color: var(--orange); }
+
+    /* Settings modal (re-configure after initial setup) */
+    .settings-panel {
+      position: absolute; top: 56px; right: 16px;
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--rlg); box-shadow: var(--shadow-l);
+      width: 360px; padding: 20px; z-index: 150;
+      display: none; animation: su .15s ease;
+    }
+    .settings-panel.on { display: block; }
+    .settings-panel h3 {
+      font-family: var(--serif); font-size: 1rem; font-weight: 400;
+      color: var(--ink); margin-bottom: 14px;
+    }
+    .sp-actions { display: flex; gap: 8px; margin-top: 14px; }
+
     /* ── Responsive ──────────────────────────────────────────── */
     @media (max-width: 1040px) {
       .wrap { grid-template-columns: 1fr; }
@@ -590,6 +663,7 @@
     <span class="upd-label" id="upd"></span>
     <button class="btn btn-ghost btn-sm" id="btnRefresh">↺ Refresh</button>
     <button class="btn btn-primary btn-sm" id="btnNew">+ New</button>
+    <button class="btn-icon-hdr" id="btnSettings" title="Settings">⚙️</button>
   </div>
 </header>
 
@@ -715,12 +789,110 @@
   </div>
 </div>
 
+<!-- First-time setup screen (shown when no API URL saved) -->
+<div class="setup-screen" id="setupScreen">
+  <div class="setup-box">
+    <div class="setup-logo">📡</div>
+    <h2>Connect your <em>Sheet</em></h2>
+    <p>Paste your Google Apps Script deployment URL below.<br>
+      You only need to do this once — it's saved in your browser.</p>
+    <div class="setup-field">
+      <label>Apps Script URL</label>
+      <input id="setupUrl" type="url"
+        placeholder="https://script.google.com/macros/s/…/exec">
+      <span class="setup-hint">Deploy → Web App → Copy the /exec URL</span>
+    </div>
+    <button class="btn btn-primary" style="width:100%;padding:10px" id="btnSetupSave">
+      Save &amp; Connect
+    </button>
+  </div>
+</div>
+
+<!-- Settings panel (gear icon dropdown) -->
+<div class="settings-panel" id="settingsPanel">
+  <h3>⚙️ Settings</h3>
+  <div class="setup-field">
+    <label>Apps Script URL</label>
+    <input id="settingsUrl" type="url"
+      placeholder="https://script.google.com/macros/s/…/exec">
+  </div>
+  <div class="sp-actions">
+    <button class="btn btn-ghost btn-sm" id="btnSettingsClose">Cancel</button>
+    <button class="btn btn-primary btn-sm" id="btnSettingsSave">Save</button>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-// ── Config — replace with your Apps Script /exec URL ─────────
-const API = 'YOUR_APPS_SCRIPT_URL';
+// ── API URL — stored in localStorage ─────────────────────────
+const API_KEY = 'conf_tracker_api_url';
+let API = localStorage.getItem(API_KEY) || '';
+
+function getApi() { return localStorage.getItem(API_KEY) || ''; }
+function saveApi(url) { localStorage.setItem(API_KEY, url.trim()); API = url.trim(); }
+
+// ── Setup screen ──────────────────────────────────────────────
+function showSetup() {
+  document.getElementById('setupScreen').classList.add('on');
+}
+function hideSetup() {
+  document.getElementById('setupScreen').classList.remove('on');
+}
+
+document.getElementById('btnSetupSave').addEventListener('click', () => {
+  const url = document.getElementById('setupUrl').value.trim();
+  if (!url.startsWith('https://script.google.com')) {
+    document.getElementById('setupUrl').style.borderColor = '#C0392B';
+    return;
+  }
+  saveApi(url);
+  hideSetup();
+  load();
+});
+
+document.getElementById('setupUrl').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btnSetupSave').click();
+});
+
+// ── Settings panel (gear icon) ────────────────────────────────
+const settingsPanel = document.getElementById('settingsPanel');
+
+document.getElementById('btnSettings').addEventListener('click', e => {
+  e.stopPropagation();
+  const isOpen = settingsPanel.classList.contains('on');
+  settingsPanel.classList.toggle('on');
+  document.getElementById('btnSettings').classList.toggle('active', !isOpen);
+  if (!isOpen) {
+    document.getElementById('settingsUrl').value = getApi();
+    document.getElementById('settingsUrl').focus();
+  }
+});
+
+document.getElementById('btnSettingsSave').addEventListener('click', () => {
+  const url = document.getElementById('settingsUrl').value.trim();
+  if (!url.startsWith('https://')) {
+    toast('Please enter a valid URL', true); return;
+  }
+  saveApi(url);
+  settingsPanel.classList.remove('on');
+  document.getElementById('btnSettings').classList.remove('active');
+  toast('API URL saved ✓');
+  load();
+});
+
+document.getElementById('btnSettingsClose').addEventListener('click', () => {
+  settingsPanel.classList.remove('on');
+  document.getElementById('btnSettings').classList.remove('active');
+});
+
+document.addEventListener('click', e => {
+  if (!settingsPanel.contains(e.target) && e.target.id !== 'btnSettings') {
+    settingsPanel.classList.remove('on');
+    document.getElementById('btnSettings').classList.remove('active');
+  }
+});
 
 // ── Interest styles ───────────────────────────────────────────
 const IPILL = {
@@ -765,10 +937,12 @@ async function apiFetch(url, opts) {
 }
 
 async function load() {
+  const url = getApi();
+  if (!url) { showSetup(); return; }
   loading = true; render();
   hideErr();
   try {
-    const data = await apiFetch(`${API}?action=getAll`);
+    const data = await apiFetch(`${url}?action=getAll`);
     all = data.conferences || [];
     document.getElementById('upd').textContent =
       'Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -996,7 +1170,7 @@ async function saveConf(id) {
   btn.disabled = true; btn.textContent = 'Saving…';
 
   try {
-    await apiFetch(API, {
+    await apiFetch(getApi(), {
       method: 'POST',
       body: JSON.stringify({ action: id ? 'update' : 'create', id, data })
     });
@@ -1016,7 +1190,7 @@ function openDel(id) {
   document.getElementById('delName').textContent = `${c['Name']} ${c['Year']}`;
   document.getElementById('btnDelConfirm').onclick = async () => {
     try {
-      await apiFetch(API, {
+      await apiFetch(getApi(), {
         method: 'POST',
         body: JSON.stringify({ action: 'delete', id })
       });
