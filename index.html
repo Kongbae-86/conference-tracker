@@ -1024,8 +1024,7 @@ function getFiltered() {
   } else if (fCardFilter === 'due') {
     list = list.filter(c => {
       const n = daysUntil(c['Submission']);
-      return n !== null && n >= 0 && n <= 60 &&
-        (c['Interest']==='Yes'||c['Interest']==='Neutral');
+      return n !== null && n >= 0 && n <= 60;
     });
   } else {
     if (fInterest) list = list.filter(c => c['Interest'] === fInterest);
@@ -1061,10 +1060,9 @@ function render() {
 function renderStats() {
   document.getElementById('sTotal').textContent = all.length || '—';
   document.getElementById('sYes').textContent   = all.filter(c => c['Interest']==='Yes').length || '—';
-  document.getElementById('sDue').textContent   = all.filter(c => {
+  document.getElementById('sDue').textContent = all.filter(c => {
     const n = daysUntil(c['Submission']);
-    return n !== null && n >= 0 && n <= 60 &&
-      (c['Interest']==='Yes'||c['Interest']==='Neutral');
+    return n !== null && n >= 0 && n <= 60;
   }).length || '—';
 
   // Highlight active card
