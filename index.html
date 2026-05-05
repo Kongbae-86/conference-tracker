@@ -326,12 +326,13 @@
       letter-spacing: .01em; white-space: nowrap;
     }
 
-    .p-yes      { background: #EAFAF1; color: #1E8449; border: 1px solid #A9DFBF; }
-    .p-neutral  { background: #EBF5FB; color: #1A5276; border: 1px solid #A9CCE3; }
-    .p-early    { background: #F4ECF7; color: #6C3483; border: 1px solid #D2B4DE; }
-    .p-overlap  { background: #FEF9E7; color: #7D6608; border: 1px solid #F9E79F; }
-    .p-past     { background: var(--sand); color: var(--ink4); border: 1px solid var(--border2); }
-    .p-no       { background: #FDEDEC; color: #922B21; border: 1px solid #F1948A; }
+    .p-yes       { background: #EAFAF1; color: #1E8449; border: 1px solid #A9DFBF; }
+    .p-submitted { background: #E8F8F5; color: #117A65; border: 1px solid #A2D9CE; }
+    .p-neutral   { background: #EBF5FB; color: #1A5276; border: 1px solid #A9CCE3; }
+    .p-early     { background: #F4ECF7; color: #6C3483; border: 1px solid #D2B4DE; }
+    .p-overlap   { background: #FEF9E7; color: #7D6608; border: 1px solid #F9E79F; }
+    .p-past      { background: var(--sand); color: var(--ink4); border: 1px solid var(--border2); }
+    .p-no        { background: #FDEDEC; color: #922B21; border: 1px solid #F1948A; }
 
     /* Deadline badge */
     .badge {
@@ -606,12 +607,13 @@
     .tab.active .tab-count { background: rgba(255,255,255,.25); }
 
     /* Interest tab colors when active */
-    .tab.t-yes.active      { background: #1E8449; border-color: #1E8449; }
-    .tab.t-neutral.active  { background: #1A5276; border-color: #1A5276; }
-    .tab.t-early.active    { background: #6C3483; border-color: #6C3483; }
-    .tab.t-overlap.active  { background: #7D6608; border-color: #7D6608; }
-    .tab.t-past.active     { background: #555;    border-color: #555; }
-    .tab.t-no.active       { background: #922B21; border-color: #922B21; }
+    .tab.t-yes.active       { background: #1E8449; border-color: #1E8449; }
+    .tab.t-submitted.active { background: #117A65; border-color: #117A65; }
+    .tab.t-neutral.active   { background: #1A5276; border-color: #1A5276; }
+    .tab.t-early.active     { background: #6C3483; border-color: #6C3483; }
+    .tab.t-overlap.active   { background: #7D6608; border-color: #7D6608; }
+    .tab.t-past.active      { background: #555;    border-color: #555; }
+    .tab.t-no.active        { background: #922B21; border-color: #922B21; }
 
     /* ── Settings modal ──────────────────────────────────────── */
     .setup-screen {
@@ -754,12 +756,13 @@
     <div class="tab-row">
       <span class="tab-row-label">View</span>
       <button class="tab active" data-tab-type="interest" data-tab-val="">All <span class="tab-count" id="tc-all">0</span></button>
-      <button class="tab t-yes"     data-tab-type="interest" data-tab-val="Yes">Yes <span class="tab-count" id="tc-yes">0</span></button>
-      <button class="tab t-neutral" data-tab-type="interest" data-tab-val="Neutral">Neutral <span class="tab-count" id="tc-neutral">0</span></button>
-      <button class="tab t-early"   data-tab-type="interest" data-tab-val="Too early">Too Early <span class="tab-count" id="tc-early">0</span></button>
-      <button class="tab t-overlap" data-tab-type="interest" data-tab-val="Overlapped">Overlapped <span class="tab-count" id="tc-overlap">0</span></button>
-      <button class="tab t-past"    data-tab-type="interest" data-tab-val="Past">Past <span class="tab-count" id="tc-past">0</span></button>
-      <button class="tab t-no"      data-tab-type="interest" data-tab-val="No">No <span class="tab-count" id="tc-no">0</span></button>
+      <button class="tab t-yes"       data-tab-type="interest" data-tab-val="Yes">Yes <span class="tab-count" id="tc-yes">0</span></button>
+      <button class="tab t-submitted" data-tab-type="interest" data-tab-val="Submitted">Submitted <span class="tab-count" id="tc-submitted">0</span></button>
+      <button class="tab t-neutral"   data-tab-type="interest" data-tab-val="Neutral">Neutral <span class="tab-count" id="tc-neutral">0</span></button>
+      <button class="tab t-early"     data-tab-type="interest" data-tab-val="Too early">Too Early <span class="tab-count" id="tc-early">0</span></button>
+      <button class="tab t-overlap"   data-tab-type="interest" data-tab-val="Overlapped">Overlapped <span class="tab-count" id="tc-overlap">0</span></button>
+      <button class="tab t-past"      data-tab-type="interest" data-tab-val="Past">Past <span class="tab-count" id="tc-past">0</span></button>
+      <button class="tab t-no"        data-tab-type="interest" data-tab-val="No">No <span class="tab-count" id="tc-no">0</span></button>
     </div>
     <div class="tab-row" id="confTabRow">
       <span class="tab-row-label">Conf</span>
@@ -948,13 +951,14 @@ document.addEventListener('click', e => {
 // ── Interest styles ───────────────────────────────────────────
 const IPILL = {
   'Yes':        'p-yes',
+  'Submitted':  'p-submitted',
   'Neutral':    'p-neutral',
   'Too early':  'p-early',
   'Overlapped': 'p-overlap',
   'Past':       'p-past',
   'No':         'p-no',
 };
-const ISORT = ['Yes','Neutral','Too early','Overlapped','Past','No'];
+const ISORT = ['Yes','Submitted','Neutral','Too early','Overlapped','Past','No'];
 
 // ── State ─────────────────────────────────────────────────────
 let all = [], loading = false;
@@ -1074,16 +1078,17 @@ function renderStats() {
 function renderTabs() {
   // Update interest tab counts
   const counts = { '': all.length };
-  ['Yes','Neutral','Too early','Overlapped','Past','No'].forEach(k => {
+  ['Yes','Submitted','Neutral','Too early','Overlapped','Past','No'].forEach(k => {
     counts[k] = all.filter(c => c['Interest'] === k).length;
   });
-  document.getElementById('tc-all').textContent     = counts[''];
-  document.getElementById('tc-yes').textContent     = counts['Yes'];
-  document.getElementById('tc-neutral').textContent = counts['Neutral'];
-  document.getElementById('tc-early').textContent   = counts['Too early'];
-  document.getElementById('tc-overlap').textContent = counts['Overlapped'];
-  document.getElementById('tc-past').textContent    = counts['Past'];
-  document.getElementById('tc-no').textContent      = counts['No'];
+  document.getElementById('tc-all').textContent       = counts[''];
+  document.getElementById('tc-yes').textContent       = counts['Yes'];
+  document.getElementById('tc-submitted').textContent = counts['Submitted'];
+  document.getElementById('tc-neutral').textContent   = counts['Neutral'];
+  document.getElementById('tc-early').textContent     = counts['Too early'];
+  document.getElementById('tc-overlap').textContent   = counts['Overlapped'];
+  document.getElementById('tc-past').textContent      = counts['Past'];
+  document.getElementById('tc-no').textContent        = counts['No'];
 
   // Update active state on interest tabs
   document.querySelectorAll('[data-tab-type="interest"]').forEach(t => {
@@ -1197,7 +1202,7 @@ function openView(id) {
 function openEdit(id) {
   const c = id ? all.find(x => x._id === id) : null;
   document.getElementById('fTitle').textContent = c ? `Edit — ${c['Name']} ${c['Year']}` : 'New Conference';
-  const io = ['Yes','Neutral','Too early','Overlapped','Past','No'].map(k =>
+  const io = ['Yes','Submitted','Neutral','Too early','Overlapped','Past','No'].map(k =>
     `<option value="${k}"${c&&c['Interest']===k?' selected':''}>${k}</option>`).join('');
   document.getElementById('fForm').innerHTML = `
     <div class="fgrid">
@@ -1263,16 +1268,38 @@ async function saveConf(id) {
   const btn = document.getElementById('btnSave');
   btn.disabled = true; btn.textContent = 'Saving…';
 
+  // ── Optimistic update: patch local state immediately ──────────
+  const newId = (data['Name'] + '_' + data['Year']).replace(/\s+/g, '_');
+  let prevEntry = null;
+  if (id) {
+    const idx = all.findIndex(c => c._id === id);
+    if (idx !== -1) {
+      prevEntry = { ...all[idx] };           // keep backup for rollback
+      all[idx] = { ...all[idx], ...data, _id: newId };
+    }
+  } else {
+    all.push({ ...data, _id: newId });
+  }
+  closeModal('ovForm');
+  render();
+
+  // ── Send to Apps Script in background ─────────────────────────
   try {
     await apiFetch(apiUrl({
       action: id ? 'update' : 'create',
       id: id || '',
       data: JSON.stringify(data)
     }));
-    closeModal('ovForm');
-    await load();
     toast(id ? 'Conference updated ✓' : 'Conference created ✓');
   } catch (e) {
+    // Rollback on failure
+    if (id && prevEntry) {
+      const idx = all.findIndex(c => c._id === newId);
+      if (idx !== -1) all[idx] = prevEntry;
+    } else {
+      all = all.filter(c => c._id !== newId);
+    }
+    render();
     toast('Error: ' + e.message, true);
     btn.disabled = false;
     btn.textContent = id ? 'Save Changes' : 'Create';
@@ -1286,7 +1313,10 @@ function openDel(id) {
   document.getElementById('btnDelConfirm').onclick = async () => {
     try {
       await apiFetch(apiUrl({ action: 'delete', id }));
-      closeModal('ovDel'); await load(); toast('Conference deleted');
+      closeModal('ovDel');
+      all = all.filter(c => c._id !== id);
+      render();
+      toast('Conference deleted');
     } catch (e) { toast('Error: ' + e.message, true); }
   };
   closeModal('ovView');
