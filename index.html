@@ -152,7 +152,7 @@
       max-width: 1360px; margin: 0 auto;
       padding: 24px 24px;
       display: grid;
-      grid-template-columns: 1fr 268px;
+      grid-template-columns: 1fr;
       grid-template-rows: auto auto 1fr;
       gap: 20px;
     }
@@ -689,7 +689,6 @@
     /* ── Responsive ──────────────────────────────────────────── */
     @media (max-width: 1040px) {
       .wrap { grid-template-columns: 1fr; }
-      .aside { grid-row: 4; }
       .hid { display: none; }
     }
     @media (max-width: 640px) {
@@ -797,16 +796,6 @@
     </div>
   </section>
 
-  <!-- Sidebar -->
-  <aside class="aside">
-    <div class="scard">
-      <div class="shead">
-        <div class="shead-dot"></div>
-        Upcoming Deadlines
-      </div>
-      <div class="dpanel" id="dpanel"></div>
-    </div>
-  </aside>
 
 </div>
 
@@ -1066,7 +1055,7 @@ function getFiltered() {
 // ── Render ────────────────────────────────────────────────────
 function render() {
   const filtered = getFiltered();
-  renderStats(); renderTabs(); renderTable(filtered); renderDeadlines();
+  renderStats(); renderTabs(); renderTable(filtered);
 }
 
 function renderStats() {
@@ -1169,34 +1158,6 @@ function renderTable(filtered) {
     r.addEventListener('click', () => openEdit(r.dataset.id));
     r.addEventListener('keydown', e => { if (e.key==='Enter') openEdit(r.dataset.id); });
   });
-}
-
-function renderDeadlines() {
-  const panel = document.getElementById('dpanel');
-  const up = all.filter(c => {
-    const n = daysUntil(c['Submission']);
-    return n !== null && n >= 0 && n <= 60 &&
-      (c['Interest']==='Yes'||c['Interest']==='Neutral');
-  }).sort((a,b) => (pd(a['Submission'])||0)-(pd(b['Submission'])||0));
-
-  if (!up.length) {
-    panel.innerHTML = '<p class="nodl">No deadlines in the next 60 days.</p>'; return;
-  }
-
-  panel.innerHTML = up.map(c => {
-    const n = daysUntil(c['Submission']);
-    const cls = n <= 7 ? 'd-u' : n <= 30 ? 'd-s' : 'd-ok';
-    return `<div class="ditem ${cls}" onclick="openEdit('${c._id}')">
-      <div class="dl">
-        <span class="dn">${c['Name']} ${c['Year']}</span>
-        <span class="dloc2">${c['Location']||''}</span>
-      </div>
-      <div class="dr">
-        <span class="dd">${n}d</span>
-        <span class="ddt">${fmtD(c['Submission'])}</span>
-      </div>
-    </div>`;
-  }).join('');
 }
 
 // ── View modal ────────────────────────────────────────────────
