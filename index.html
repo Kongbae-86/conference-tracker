@@ -556,6 +556,11 @@
     }
     .err-banner.on { display: block; }
 
+    .stats { grid-template-columns: repeat(3, 1fr); }
+    .stat.card-active { box-shadow: var(--shadow-m); transform: translateY(-2px); }
+    .stat.card-active::before { height: 4px; }
+    .stat.card-active .slabel { color: var(--ink2); }
+
     /* ── Tabs ────────────────────────────────────────────────── */
     .tabs-wrap {
       grid-column: 1 / -1;
@@ -690,7 +695,7 @@
     @media (max-width: 640px) {
       .wrap { padding: 14px; gap: 14px; }
       .header { padding: 0 16px; }
-      .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .stats { grid-template-columns: repeat(3, 1fr); gap: 10px; }
       .fgrid, .dgrid { grid-template-columns: 1fr; }
       .brand-sep, .brand-sub { display: none; }
       .page-title h1 { font-size: 1.5rem; }
@@ -731,20 +736,16 @@
 
   <!-- Stats -->
   <div class="stats">
-    <div class="stat">
+    <div class="stat" id="cardTotal" style="cursor:pointer">
       <span class="slabel">Total</span>
       <span class="sval" id="sTotal">—</span>
     </div>
-    <div class="stat s-yes">
+    <div class="stat s-yes" id="cardYes" style="cursor:pointer">
       <span class="slabel">Interested</span>
       <span class="sval" id="sYes">—</span>
     </div>
-    <div class="stat s-neu">
-      <span class="slabel">Considering</span>
-      <span class="sval" id="sNeu">—</span>
-    </div>
-    <div class="stat s-due">
-      <span class="slabel">Due ≤ 30d</span>
+    <div class="stat s-due" id="cardDue" style="cursor:pointer">
+      <span class="slabel">Due ≤ 60d</span>
       <span class="sval" id="sDue">—</span>
     </div>
   </div>
@@ -969,7 +970,7 @@ const ISORT = ['Yes','Neutral','Too early','Overlapped','Past','No'];
 // ── State ─────────────────────────────────────────────────────
 let all = [], loading = false;
 let sortF = 'Submission', sortD = 'asc';
-let fSearch = '', fInterest = '', fConf = '';
+let fSearch = '', fInterest = '', fConf = '', fCardFilter = '';
 
 // ── Date helpers ──────────────────────────────────────────────
 const pd    = s => s ? new Date(s.replace(/\//g, '-')) : null;
@@ -1027,8 +1028,21 @@ async function load() {
 // ── Filtered + sorted ─────────────────────────────────────────
 function getFiltered() {
   let list = all.slice();
-  if (fInterest) list = list.filter(c => c['Interest'] === fInterest);
-  if (fConf)     list = list.filter(c => c['Name'] === fConf);
+
+  // Card filter overrides interest/conf tabs
+  if (fCardFilter === 'yes') {
+    list = list.filter(c => c['Interest'] === 'Yes');
+  } else if (fCardFilter === 'due') {
+    list = list.filter(c => {
+      const n = daysUntil(c['Submission']);
+      return n !== null && n >= 0 && n <= 60 &&
+        (c['Interest']==='Yes'||c['Interest']==='Neutral');
+    });
+  } else {
+    if (fInterest) list = list.filter(c => c['Interest'] === fInterest);
+    if (fConf)     list = list.filter(c => c['Name'] === fConf);
+  }
+
   if (fSearch) {
     const q = fSearch.toLowerCase();
     list = list.filter(c =>
@@ -1058,12 +1072,16 @@ function render() {
 function renderStats() {
   document.getElementById('sTotal').textContent = all.length || '—';
   document.getElementById('sYes').textContent   = all.filter(c => c['Interest']==='Yes').length || '—';
-  document.getElementById('sNeu').textContent   = all.filter(c => c['Interest']==='Neutral').length || '—';
   document.getElementById('sDue').textContent   = all.filter(c => {
     const n = daysUntil(c['Submission']);
-    return n !== null && n >= 0 && n <= 30 &&
+    return n !== null && n >= 0 && n <= 60 &&
       (c['Interest']==='Yes'||c['Interest']==='Neutral');
   }).length || '—';
+
+  // Highlight active card
+  document.getElementById('cardTotal').classList.toggle('card-active', fCardFilter === 'total');
+  document.getElementById('cardYes').classList.toggle('card-active',   fCardFilter === 'yes');
+  document.getElementById('cardDue').classList.toggle('card-active',   fCardFilter === 'due');
 }
 
 function renderTabs() {
@@ -1105,6 +1123,7 @@ function renderTabs() {
   confRow.querySelectorAll('[data-tab-type="conf"]').forEach(t => {
     t.addEventListener('click', () => {
       fConf = t.dataset.tabVal;
+      fCardFilter = '';
       render();
     });
   });
@@ -1147,8 +1166,8 @@ function renderTable(filtered) {
   }).join('');
 
   tb.querySelectorAll('.row').forEach(r => {
-    r.addEventListener('click', () => openView(r.dataset.id));
-    r.addEventListener('keydown', e => { if (e.key==='Enter') openView(r.dataset.id); });
+    r.addEventListener('click', () => openEdit(r.dataset.id));
+    r.addEventListener('keydown', e => { if (e.key==='Enter') openEdit(r.dataset.id); });
   });
 }
 
@@ -1167,7 +1186,7 @@ function renderDeadlines() {
   panel.innerHTML = up.map(c => {
     const n = daysUntil(c['Submission']);
     const cls = n <= 7 ? 'd-u' : n <= 30 ? 'd-s' : 'd-ok';
-    return `<div class="ditem ${cls}" onclick="openView('${c._id}')">
+    return `<div class="ditem ${cls}" onclick="openEdit('${c._id}')">
       <div class="dl">
         <span class="dn">${c['Name']} ${c['Year']}</span>
         <span class="dloc2">${c['Location']||''}</span>
@@ -1366,11 +1385,25 @@ document.querySelectorAll('th[data-s]').forEach(th =>
 );
 
 // ── Filters & controls ────────────────────────────────────────
+// ── Card click filters ────────────────────────────────────────
+document.getElementById('cardTotal').addEventListener('click', () => {
+  fCardFilter = fCardFilter === 'total' ? '' : 'total';
+  fInterest = ''; fConf = ''; render();
+});
+document.getElementById('cardYes').addEventListener('click', () => {
+  fCardFilter = fCardFilter === 'yes' ? '' : 'yes';
+  fInterest = ''; fConf = ''; render();
+});
+document.getElementById('cardDue').addEventListener('click', () => {
+  fCardFilter = fCardFilter === 'due' ? '' : 'due';
+  fInterest = ''; fConf = ''; render();
+});
+
 // ── Tab clicks (interest row) ─────────────────────────────────
 document.querySelectorAll('[data-tab-type="interest"]').forEach(t => {
   t.addEventListener('click', () => {
     fInterest = t.dataset.tabVal;
-    fConf = ''; // reset conf tab when switching interest
+    fConf = ''; fCardFilter = '';
     render();
   });
 });
