@@ -556,6 +556,58 @@
     }
     .err-banner.on { display: block; }
 
+    /* ── Tabs ────────────────────────────────────────────────── */
+    .tabs-wrap {
+      grid-column: 1 / -1;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+
+    .tab-row {
+      display: flex; align-items: center; gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .tab-row-label {
+      font-size: .67rem; font-weight: 600;
+      color: var(--ink4); text-transform: uppercase;
+      letter-spacing: .07em; margin-right: 4px;
+      white-space: nowrap; min-width: 52px;
+    }
+
+    .tab {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 20px;
+      font-size: .78rem; font-weight: 500;
+      cursor: pointer; border: 1px solid var(--border2);
+      background: var(--white); color: var(--ink3);
+      transition: all var(--ease); white-space: nowrap;
+      line-height: 1;
+    }
+
+    .tab:hover { background: var(--sand); color: var(--ink); border-color: var(--border2); }
+
+    .tab.active {
+      background: var(--orange); color: #fff;
+      border-color: var(--orange);
+      box-shadow: 0 1px 4px rgba(212,89,10,.25);
+    }
+
+    .tab-count {
+      font-size: .68rem; font-weight: 700;
+      background: rgba(0,0,0,.12); border-radius: 10px;
+      padding: 1px 5px; line-height: 1.4;
+    }
+
+    .tab.active .tab-count { background: rgba(255,255,255,.25); }
+
+    /* Interest tab colors when active */
+    .tab.t-yes.active      { background: #1E8449; border-color: #1E8449; }
+    .tab.t-neutral.active  { background: #1A5276; border-color: #1A5276; }
+    .tab.t-early.active    { background: #6C3483; border-color: #6C3483; }
+    .tab.t-overlap.active  { background: #7D6608; border-color: #7D6608; }
+    .tab.t-past.active     { background: #555;    border-color: #555; }
+    .tab.t-no.active       { background: #922B21; border-color: #922B21; }
+
     /* ── Settings modal ──────────────────────────────────────── */
     .setup-screen {
       display: none; position: fixed; inset: 0;
@@ -697,21 +749,30 @@
     </div>
   </div>
 
+  <!-- Tabs -->
+  <div class="tabs-wrap">
+    <div class="tab-row">
+      <span class="tab-row-label">View</span>
+      <button class="tab active" data-tab-type="interest" data-tab-val="">All <span class="tab-count" id="tc-all">0</span></button>
+      <button class="tab t-yes"     data-tab-type="interest" data-tab-val="Yes">Yes <span class="tab-count" id="tc-yes">0</span></button>
+      <button class="tab t-neutral" data-tab-type="interest" data-tab-val="Neutral">Neutral <span class="tab-count" id="tc-neutral">0</span></button>
+      <button class="tab t-early"   data-tab-type="interest" data-tab-val="Too early">Too Early <span class="tab-count" id="tc-early">0</span></button>
+      <button class="tab t-overlap" data-tab-type="interest" data-tab-val="Overlapped">Overlapped <span class="tab-count" id="tc-overlap">0</span></button>
+      <button class="tab t-past"    data-tab-type="interest" data-tab-val="Past">Past <span class="tab-count" id="tc-past">0</span></button>
+      <button class="tab t-no"      data-tab-type="interest" data-tab-val="No">No <span class="tab-count" id="tc-no">0</span></button>
+    </div>
+    <div class="tab-row" id="confTabRow">
+      <span class="tab-row-label">Conf</span>
+      <!-- dynamically populated -->
+    </div>
+  </div>
+
   <!-- Table -->
   <section class="card">
     <div class="toolbar">
       <div class="srch">
         <input id="search" type="text" placeholder="Search by name, location, year…" autocomplete="off">
       </div>
-      <select id="fltInterest" class="flt">
-        <option value="">All Interest Levels</option>
-        <option value="Yes">Yes</option>
-        <option value="Neutral">Neutral</option>
-        <option value="Too early">Too Early</option>
-        <option value="Overlapped">Overlapped</option>
-        <option value="Past">Past</option>
-        <option value="No">No</option>
-      </select>
     </div>
     <div class="twrap">
       <table>
@@ -908,7 +969,7 @@ const ISORT = ['Yes','Neutral','Too early','Overlapped','Past','No'];
 // ── State ─────────────────────────────────────────────────────
 let all = [], loading = false;
 let sortF = 'Submission', sortD = 'asc';
-let fSearch = '', fInterest = '';
+let fSearch = '', fInterest = '', fConf = '';
 
 // ── Date helpers ──────────────────────────────────────────────
 const pd    = s => s ? new Date(s.replace(/\//g, '-')) : null;
@@ -927,22 +988,32 @@ function badge(sub) {
   return `<span class="badge bd-ok">${n}d</span>`;
 }
 
-// ── API calls ─────────────────────────────────────────────────
-async function apiFetch(url, opts) {
-  const res = await fetch(url, opts);
+// ── API calls (GET only — avoids CORS issues with Apps Script) ─
+async function apiFetch(url) {
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   if (data.error) throw new Error(data.error);
   return data;
 }
 
+function apiUrl(params) {
+  const base = getApi();
+  const qs = Object.entries(params)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&');
+  return `${base}?${qs}`;
+}
+
 async function load() {
   const url = getApi();
-  if (!url) { showSetup(); return; }
+  if (!url || !url.startsWith('https://script.google.com')) {
+    showSetup(); return;
+  }
   loading = true; render();
   hideErr();
   try {
-    const data = await apiFetch(`${url}?action=getAll`);
+    const data = await apiFetch(apiUrl({ action: 'getAll' }));
     all = data.conferences || [];
     document.getElementById('upd').textContent =
       'Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -957,6 +1028,7 @@ async function load() {
 function getFiltered() {
   let list = all.slice();
   if (fInterest) list = list.filter(c => c['Interest'] === fInterest);
+  if (fConf)     list = list.filter(c => c['Name'] === fConf);
   if (fSearch) {
     const q = fSearch.toLowerCase();
     list = list.filter(c =>
@@ -980,7 +1052,7 @@ function getFiltered() {
 // ── Render ────────────────────────────────────────────────────
 function render() {
   const filtered = getFiltered();
-  renderStats(); renderTable(filtered); renderDeadlines();
+  renderStats(); renderTabs(); renderTable(filtered); renderDeadlines();
 }
 
 function renderStats() {
@@ -992,6 +1064,50 @@ function renderStats() {
     return n !== null && n >= 0 && n <= 30 &&
       (c['Interest']==='Yes'||c['Interest']==='Neutral');
   }).length || '—';
+}
+
+function renderTabs() {
+  // Update interest tab counts
+  const counts = { '': all.length };
+  ['Yes','Neutral','Too early','Overlapped','Past','No'].forEach(k => {
+    counts[k] = all.filter(c => c['Interest'] === k).length;
+  });
+  document.getElementById('tc-all').textContent     = counts[''];
+  document.getElementById('tc-yes').textContent     = counts['Yes'];
+  document.getElementById('tc-neutral').textContent = counts['Neutral'];
+  document.getElementById('tc-early').textContent   = counts['Too early'];
+  document.getElementById('tc-overlap').textContent = counts['Overlapped'];
+  document.getElementById('tc-past').textContent    = counts['Past'];
+  document.getElementById('tc-no').textContent      = counts['No'];
+
+  // Update active state on interest tabs
+  document.querySelectorAll('[data-tab-type="interest"]').forEach(t => {
+    t.classList.toggle('active', t.dataset.tabVal === fInterest);
+  });
+
+  // Build conference name tabs dynamically
+  const names = [...new Set(all.map(c => c['Name']).filter(Boolean))].sort();
+  const confRow = document.getElementById('confTabRow');
+  const allConfTab = fConf === ''
+    ? `<button class="tab active" data-tab-type="conf" data-tab-val="">All</button>`
+    : `<button class="tab" data-tab-type="conf" data-tab-val="">All</button>`;
+
+  confRow.innerHTML = `<span class="tab-row-label">Conf</span>` + allConfTab +
+    names.map(name => {
+      const cnt = all.filter(c => c['Name'] === name).length;
+      const active = fConf === name ? ' active' : '';
+      return `<button class="tab${active}" data-tab-type="conf" data-tab-val="${name}">
+        ${name} <span class="tab-count">${cnt}</span>
+      </button>`;
+    }).join('');
+
+  // Bind conf tab clicks
+  confRow.querySelectorAll('[data-tab-type="conf"]').forEach(t => {
+    t.addEventListener('click', () => {
+      fConf = t.dataset.tabVal;
+      render();
+    });
+  });
 }
 
 function renderTable(filtered) {
@@ -1170,10 +1286,11 @@ async function saveConf(id) {
   btn.disabled = true; btn.textContent = 'Saving…';
 
   try {
-    await apiFetch(getApi(), {
-      method: 'POST',
-      body: JSON.stringify({ action: id ? 'update' : 'create', id, data })
-    });
+    await apiFetch(apiUrl({
+      action: id ? 'update' : 'create',
+      id: id || '',
+      data: JSON.stringify(data)
+    }));
     closeModal('ovForm');
     await load();
     toast(id ? 'Conference updated ✓' : 'Conference created ✓');
@@ -1190,10 +1307,7 @@ function openDel(id) {
   document.getElementById('delName').textContent = `${c['Name']} ${c['Year']}`;
   document.getElementById('btnDelConfirm').onclick = async () => {
     try {
-      await apiFetch(getApi(), {
-        method: 'POST',
-        body: JSON.stringify({ action: 'delete', id })
-      });
+      await apiFetch(apiUrl({ action: 'delete', id }));
       closeModal('ovDel'); await load(); toast('Conference deleted');
     } catch (e) { toast('Error: ' + e.message, true); }
   };
@@ -1231,7 +1345,10 @@ function toast(msg, err = false) {
 }
 function showErr(msg) {
   const el = document.getElementById('errBanner');
-  el.textContent = '⚠ Could not load data: ' + msg + ' — Check your Apps Script URL and deployment.';
+  el.innerHTML = `⚠ Could not load data: ${msg} &nbsp;—&nbsp;
+    <a href="#" onclick="showSetup();return false;" style="color:var(--orange);font-weight:600">
+      Configure API URL
+    </a>`;
   el.classList.add('on');
 }
 function hideErr() { document.getElementById('errBanner').classList.remove('on'); }
@@ -1249,8 +1366,16 @@ document.querySelectorAll('th[data-s]').forEach(th =>
 );
 
 // ── Filters & controls ────────────────────────────────────────
+// ── Tab clicks (interest row) ─────────────────────────────────
+document.querySelectorAll('[data-tab-type="interest"]').forEach(t => {
+  t.addEventListener('click', () => {
+    fInterest = t.dataset.tabVal;
+    fConf = ''; // reset conf tab when switching interest
+    render();
+  });
+});
+
 document.getElementById('search').addEventListener('input', e => { fSearch = e.target.value.trim(); render(); });
-document.getElementById('fltInterest').addEventListener('change', e => { fInterest = e.target.value; render(); });
 document.getElementById('btnRefresh').addEventListener('click', load);
 document.getElementById('btnNew').addEventListener('click', () => openEdit(null));
 
@@ -1260,6 +1385,13 @@ if ('serviceWorker' in navigator) {
 }
 
 // ── Init ──────────────────────────────────────────────────────
+// Clear stale/invalid saved URL so setup screen shows correctly
+(function() {
+  const saved = localStorage.getItem(API_KEY) || '';
+  if (saved && !saved.startsWith('https://script.google.com')) {
+    localStorage.removeItem(API_KEY);
+  }
+})();
 load();
 </script>
 </body>
