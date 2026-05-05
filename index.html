@@ -756,6 +756,7 @@
     <div class="tab-row">
       <span class="tab-row-label">View</span>
       <button class="tab active" data-tab-type="interest" data-tab-val="">All <span class="tab-count" id="tc-all">0</span></button>
+      <button class="tab"         data-tab-type="interest" data-tab-val="__all__">All (incl. Past) <span class="tab-count" id="tc-allincl">0</span></button>
       <button class="tab t-yes"       data-tab-type="interest" data-tab-val="Yes">Yes <span class="tab-count" id="tc-yes">0</span></button>
       <button class="tab t-submitted" data-tab-type="interest" data-tab-val="Submitted">Submitted <span class="tab-count" id="tc-submitted">0</span></button>
       <button class="tab t-neutral"   data-tab-type="interest" data-tab-val="Neutral">Neutral <span class="tab-count" id="tc-neutral">0</span></button>
@@ -1031,8 +1032,14 @@ function getFiltered() {
       return n !== null && n >= 0 && n <= 60;
     });
   } else {
-    if (fInterest) list = list.filter(c => c['Interest'] === fInterest);
-    if (fConf)     list = list.filter(c => c['Name'] === fConf);
+    if (fInterest === '__all__') {
+      // show everything, no filter
+    } else if (!fInterest) {
+      list = list.filter(c => c['Interest'] !== 'Past'); // default: exclude Past
+    } else {
+      list = list.filter(c => c['Interest'] === fInterest);
+    }
+    if (fConf) list = list.filter(c => c['Name'] === fConf);
   }
 
   if (fSearch) {
@@ -1081,7 +1088,8 @@ function renderTabs() {
   ['Yes','Submitted','Neutral','Too early','Overlapped','Past','No'].forEach(k => {
     counts[k] = all.filter(c => c['Interest'] === k).length;
   });
-  document.getElementById('tc-all').textContent       = counts[''];
+  document.getElementById('tc-all').textContent       = all.filter(c => c['Interest'] !== 'Past').length;
+  document.getElementById('tc-allincl').textContent   = all.length;
   document.getElementById('tc-yes').textContent       = counts['Yes'];
   document.getElementById('tc-submitted').textContent = counts['Submitted'];
   document.getElementById('tc-neutral').textContent   = counts['Neutral'];
@@ -1090,7 +1098,6 @@ function renderTabs() {
   document.getElementById('tc-past').textContent      = counts['Past'];
   document.getElementById('tc-no').textContent        = counts['No'];
 
-  // Update active state on interest tabs
   document.querySelectorAll('[data-tab-type="interest"]').forEach(t => {
     t.classList.toggle('active', t.dataset.tabVal === fInterest);
   });
