@@ -1000,6 +1000,17 @@ function apiUrl(params) {
   return `${base}?${qs}`;
 }
 
+// ── Auto-assign Past if submission date has passed ────────────
+// Skips Submitted entries (intentionally kept as-is)
+function autoPast() {
+  const SKIP = new Set(['Submitted', 'Past']);
+  all.forEach(c => {
+    if (SKIP.has(c['Interest'])) return;
+    const n = daysUntil(c['Submission']);
+    if (n !== null && n < 0) c['Interest'] = 'Past';
+  });
+}
+
 async function load() {
   const url = getApi();
   if (!url || !url.startsWith('https://script.google.com')) {
@@ -1010,6 +1021,7 @@ async function load() {
   try {
     const data = await apiFetch(apiUrl({ action: 'getAll' }));
     all = data.conferences || [];
+    autoPast();
     document.getElementById('upd').textContent =
       'Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   } catch (e) {
@@ -1288,6 +1300,7 @@ async function saveConf(id) {
     all.push({ ...data, _id: newId });
   }
   closeModal('ovForm');
+  autoPast();
   render();
 
   // ── Send to Apps Script in background ─────────────────────────
