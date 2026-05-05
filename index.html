@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="description" content="Track academic conference deadlines">
+  <title>Conference Tracker</title>
+
+  <!-- PWA manifest inline -->
+  <link rel="manifest" href="data:application/json,%7B%22name%22%3A%22Conference%20Tracker%22%2C%22short_name%22%3A%22Conferences%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%23D4590A%22%7D">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Design tokens ───────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Anthropic palette */
+      --cream:    #FAF9F6;
+      --white:    #FFFFFF;
+      --orange:   #D4590A;
+      --orange2:  #E8621A;
+      --orange-l: #FFF0E6;
+      --orange-m: #FFD9BC;
+      --sand:     #F5F0E8;
+      --sand2:    #EDE8DF;
+      --ink:      #1A1A1A;
+      --ink2:     #3D3D3D;
+      --ink3:     #6B6B6B;
+      --ink4:     #9A9A9A;
+      --border:   #E5E0D8;
+      --border2:  #D0C8BC;
+      --shadow-s: 0 1px 4px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.04);
+      --shadow-m: 0 4px 16px rgba(0,0,0,.08), 0 1px 4px rgba(0,0,0,.04);
+      --shadow-l: 0 12px 40px rgba(0,0,0,.12), 0 4px 12px rgba(0,0,0,.06);
+      --r:        8px;
+      --rlg:      14px;
+      --sans:     'Geist', sans-serif;
+      --serif:    'Instrument Serif', serif;
+      --ease:     0.15s ease;
+    }
+
+    html { font-size: 15px; scroll-behavior: smooth; }
+    body {
+      font-family: var(--sans);
+      background: var(--cream);
+      color: var(--ink);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    button { font-family: inherit; cursor: pointer; border: none; }
+
+    /* ── Header ──────────────────────────────────────────────── */
+    .header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: var(--shadow-s);
+    }
+
+    .brand {
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .brand-logo {
+      width: 28px; height: 28px;
+      /* Anthropic-style logomark: simple stylized A */
+    }
+
+    .brand-wordmark {
+      font-family: var(--serif);
+      font-size: 1.15rem;
+      color: var(--ink);
+      letter-spacing: -.01em;
+    }
+
+    .brand-wordmark em {
+      font-style: italic;
+      color: var(--orange);
+    }
+
+    .brand-sep {
+      width: 1px; height: 18px;
+      background: var(--border2); margin: 0 2px;
+    }
+
+    .brand-sub {
+      font-size: .75rem; font-weight: 500;
+      color: var(--ink4); letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+
+    .hdr-right { display: flex; align-items: center; gap: 8px; }
+
+    .upd-label {
+      font-size: .7rem; color: var(--ink4);
+      font-weight: 400;
+    }
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 5px; border-radius: var(--r);
+      font-family: var(--sans); font-weight: 500;
+      cursor: pointer; transition: all var(--ease);
+      border: 1px solid transparent;
+    }
+    .btn-md { padding: 7px 14px; font-size: .82rem; }
+    .btn-sm { padding: 5px 11px; font-size: .78rem; }
+
+    .btn-primary {
+      background: var(--orange); color: #fff;
+      border-color: var(--orange);
+      box-shadow: 0 1px 3px rgba(212,89,10,.25);
+    }
+    .btn-primary:hover {
+      background: var(--orange2); border-color: var(--orange2);
+      box-shadow: 0 2px 8px rgba(212,89,10,.3);
+      transform: translateY(-1px);
+    }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      background: transparent; color: var(--ink2);
+      border-color: var(--border2);
+    }
+    .btn-ghost:hover { background: var(--sand); color: var(--ink); }
+
+    .btn-danger {
+      background: #FFF0EE; color: #C0392B;
+      border-color: #FADADD;
+    }
+    .btn-danger:hover { background: #FADADD; }
+
+    .btn-outline-orange {
+      background: var(--orange-l); color: var(--orange);
+      border-color: var(--orange-m);
+    }
+    .btn-outline-orange:hover { background: var(--orange-m); }
+
+    /* ── Main layout ─────────────────────────────────────────── */
+    .wrap {
+      max-width: 1360px; margin: 0 auto;
+      padding: 24px 24px;
+      display: grid;
+      grid-template-columns: 1fr 268px;
+      grid-template-rows: auto auto 1fr;
+      gap: 20px;
+    }
+
+    /* ── Page title ──────────────────────────────────────────── */
+    .page-title {
+      grid-column: 1 / -1;
+      display: flex; align-items: flex-end; justify-content: space-between;
+      padding-bottom: 4px;
+    }
+
+    .page-title h1 {
+      font-family: var(--serif);
+      font-size: 1.9rem;
+      font-weight: 400;
+      color: var(--ink);
+      letter-spacing: -.02em;
+      line-height: 1;
+    }
+
+    .page-title h1 em {
+      font-style: italic; color: var(--orange);
+    }
+
+    /* ── Stats ───────────────────────────────────────────────── */
+    .stats {
+      grid-column: 1 / -1;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    }
+
+    .stat {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--rlg);
+      padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 5px;
+      box-shadow: var(--shadow-s);
+      transition: box-shadow var(--ease), transform var(--ease);
+      position: relative; overflow: hidden;
+    }
+
+    .stat::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--border2);
+    }
+
+    .stat:hover { box-shadow: var(--shadow-m); transform: translateY(-1px); }
+
+    .stat.s-yes::before  { background: #27AE60; }
+    .stat.s-neu::before  { background: #2980B9; }
+    .stat.s-due::before  { background: var(--orange); }
+
+    .slabel {
+      font-size: .69rem; font-weight: 600;
+      color: var(--ink4); text-transform: uppercase; letter-spacing: .07em;
+    }
+
+    .sval {
+      font-family: var(--serif);
+      font-size: 2.1rem; line-height: 1;
+      color: var(--ink);
+    }
+
+    .stat.s-yes .sval  { color: #27AE60; }
+    .stat.s-neu .sval  { color: #2980B9; }
+    .stat.s-due .sval  { color: var(--orange); }
+
+    /* ── Table card ──────────────────────────────────────────── */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--rlg);
+      box-shadow: var(--shadow-s);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+
+    .toolbar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+      background: var(--sand);
+      flex-wrap: wrap;
+    }
+
+    .srch {
+      position: relative; flex: 1; min-width: 150px;
+    }
+
+    .srch::before {
+      content: '⌕';
+      position: absolute; left: 9px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--ink4); pointer-events: none; font-size: 1.05rem;
+    }
+
+    .srch input {
+      width: 100%;
+      background: var(--white);
+      border: 1px solid var(--border2);
+      border-radius: var(--r);
+      color: var(--ink);
+      font-family: var(--sans); font-size: .83rem;
+      padding: 6px 10px 6px 28px;
+      outline: none;
+      transition: border-color var(--ease), box-shadow var(--ease);
+    }
+
+    .srch input:focus {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(212,89,10,.1);
+    }
+
+    .srch input::placeholder { color: var(--ink4); }
+
+    select.flt {
+      background: var(--white);
+      border: 1px solid var(--border2);
+      border-radius: var(--r);
+      color: var(--ink); font-family: var(--sans); font-size: .83rem;
+      padding: 6px 10px; outline: none; cursor: pointer;
+      transition: border-color var(--ease);
+    }
+
+    select.flt:focus { border-color: var(--orange); }
+
+    /* ── Table ───────────────────────────────────────────────── */
+    .twrap { overflow-x: auto; flex: 1; }
+
+    table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+
+    thead th {
+      background: var(--sand);
+      color: var(--ink4);
+      font-size: .68rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em;
+      padding: 9px 14px; text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap; user-select: none;
+    }
+
+    th[data-s] { cursor: pointer; transition: color var(--ease); }
+    th[data-s]:hover { color: var(--orange); }
+    th.sa::after { content: ' ↑'; color: var(--orange); }
+    th.sd::after { content: ' ↓'; color: var(--orange); }
+
+    .row {
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background var(--ease);
+    }
+
+    .row:hover { background: var(--sand); }
+    .row:focus { background: var(--sand); outline: none; }
+    .row:last-child { border-bottom: none; }
+
+    td { padding: 11px 14px; vertical-align: middle; }
+
+    .cname { font-weight: 600; color: var(--ink); display: block; }
+    .cyear {
+      font-size: .72rem; color: var(--ink4);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Interest pills */
+    .pill {
+      display: inline-block;
+      padding: 3px 9px; border-radius: 20px;
+      font-size: .71rem; font-weight: 600;
+      letter-spacing: .01em; white-space: nowrap;
+    }
+
+    .p-yes      { background: #EAFAF1; color: #1E8449; border: 1px solid #A9DFBF; }
+    .p-neutral  { background: #EBF5FB; color: #1A5276; border: 1px solid #A9CCE3; }
+    .p-early    { background: #F4ECF7; color: #6C3483; border: 1px solid #D2B4DE; }
+    .p-overlap  { background: #FEF9E7; color: #7D6608; border: 1px solid #F9E79F; }
+    .p-past     { background: var(--sand); color: var(--ink4); border: 1px solid var(--border2); }
+    .p-no       { background: #FDEDEC; color: #922B21; border: 1px solid #F1948A; }
+
+    /* Deadline badge */
+    .badge {
+      display: inline-block;
+      font-size: .64rem; font-weight: 700;
+      padding: 1px 6px; border-radius: 4px;
+      margin-left: 5px; vertical-align: middle;
+      letter-spacing: .02em;
+    }
+
+    .bd-urgent { background: #FDECEA; color: #C0392B; border: 1px solid #F5B7B1; }
+    .bd-soon   { background: var(--orange-l); color: var(--orange); border: 1px solid var(--orange-m); }
+    .bd-ok     { background: #E8F4FD; color: #2471A3; border: 1px solid #AED6F1; }
+    .bd-past   { background: var(--sand); color: var(--ink4); border: 1px solid var(--border); }
+
+    .ddate { font-size: .79rem; color: var(--ink3); font-variant-numeric: tabular-nums; }
+    .dloc  { font-size: .82rem; color: var(--ink3); }
+    .dconf { font-size: .76rem; color: var(--ink4); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    .acts { display: flex; gap: 4px; opacity: 0; transition: opacity var(--ease); }
+    .row:hover .acts { opacity: 1; }
+
+    .ibtn {
+      background: var(--sand); border: 1px solid var(--border2);
+      border-radius: 6px; color: var(--ink3); font-size: .8rem;
+      width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all var(--ease);
+    }
+    .ibtn:hover { background: var(--sand2); border-color: var(--border2); }
+    .ibtn.del:hover { background: #FDECEA; border-color: #F5B7B1; color: #C0392B; }
+
+    .empty {
+      display: none; flex-direction: column; align-items: center;
+      justify-content: center; padding: 60px; gap: 8px;
+    }
+    .empty-icon { font-size: 2.4rem; }
+    .empty p { font-size: .87rem; color: var(--ink4); }
+
+    .loadrow { text-align: center; padding: 48px; }
+    .spin {
+      width: 24px; height: 24px;
+      border: 2px solid var(--border2);
+      border-top-color: var(--orange);
+      border-radius: 50%;
+      animation: spin .7s linear infinite; margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Sidebar ─────────────────────────────────────────────── */
+    .aside { display: flex; flex-direction: column; gap: 16px; }
+
+    .scard {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--rlg);
+      box-shadow: var(--shadow-s);
+      overflow: hidden;
+    }
+
+    .shead {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--sand);
+      font-size: .69rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .07em;
+      color: var(--ink4);
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .shead-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--orange); flex-shrink: 0;
+    }
+
+    .dpanel { padding: 6px; }
+
+    .ditem {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 10px; border-radius: var(--r); margin-bottom: 3px;
+      cursor: pointer; transition: background var(--ease);
+      border-left: 3px solid transparent;
+    }
+
+    .ditem:hover { background: var(--sand); }
+    .d-u  { border-left-color: #C0392B; }
+    .d-s  { border-left-color: var(--orange); }
+    .d-ok { border-left-color: #2471A3; }
+
+    .dl { display: flex; flex-direction: column; gap: 1px; }
+    .dn { font-size: .81rem; font-weight: 600; color: var(--ink); }
+    .dloc2 { font-size: .69rem; color: var(--ink4); }
+
+    .dr { text-align: right; }
+    .dd {
+      display: block;
+      font-size: .88rem; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .d-u .dd  { color: #C0392B; }
+    .d-s .dd  { color: var(--orange); }
+    .d-ok .dd { color: #2471A3; }
+    .ddt { font-size: .66rem; color: var(--ink4); }
+    .nodl { font-size: .81rem; color: var(--ink4); padding: 14px 10px; text-align: center; }
+
+    /* ── Modals ──────────────────────────────────────────────── */
+    .ov {
+      display: none; position: fixed; inset: 0;
+      background: rgba(26,26,26,.45);
+      z-index: 200; align-items: center; justify-content: center;
+      padding: 20px;
+      backdrop-filter: blur(3px);
+      animation: fi .15s ease;
+    }
+    .ov.on { display: flex; }
+    @keyframes fi { from { opacity: 0; } }
+
+    .modal {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--rlg);
+      box-shadow: var(--shadow-l);
+      width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto;
+      animation: su .18s ease;
+    }
+    @keyframes su { from { transform: translateY(12px); opacity: 0; } }
+
+    .mhdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+      background: var(--sand);
+    }
+
+    .mhdr h2 {
+      font-family: var(--serif);
+      font-size: 1.1rem; font-weight: 400;
+      color: var(--ink); letter-spacing: -.01em;
+    }
+
+    .mx {
+      background: var(--white); border: 1px solid var(--border2);
+      border-radius: 6px; color: var(--ink4);
+      width: 26px; height: 26px; font-size: .9rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all var(--ease);
+    }
+    .mx:hover { background: var(--sand2); color: var(--ink); }
+
+    .mbody { padding: 20px; }
+
+    /* Detail view */
+    .dgrid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 14px; margin-bottom: 20px;
+    }
+    .drow { display: flex; flex-direction: column; gap: 4px; }
+    .dlbl {
+      font-size: .67rem; font-weight: 600;
+      color: var(--ink4); text-transform: uppercase; letter-spacing: .07em;
+    }
+    .dval { font-size: .87rem; color: var(--ink2); }
+
+    .macts {
+      display: flex; gap: 8px;
+      padding-top: 16px; border-top: 1px solid var(--border);
+    }
+
+    /* Form */
+    .fgrid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 14px; margin-bottom: 20px;
+    }
+    .fg { display: flex; flex-direction: column; gap: 5px; }
+    .fg label {
+      font-size: .67rem; font-weight: 600;
+      color: var(--ink4); text-transform: uppercase; letter-spacing: .07em;
+    }
+    .fg input, .fg select {
+      background: var(--white); border: 1px solid var(--border2);
+      border-radius: var(--r); color: var(--ink);
+      font-family: var(--sans); font-size: .84rem;
+      padding: 8px 11px; outline: none;
+      transition: border-color var(--ease), box-shadow var(--ease);
+    }
+    .fg input:focus, .fg select:focus {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(212,89,10,.1);
+    }
+    .facts {
+      display: flex; gap: 8px; justify-content: flex-end;
+      padding-top: 16px; border-top: 1px solid var(--border);
+    }
+
+    /* Delete */
+    .delbody { padding: 20px; }
+    .delbody p { color: var(--ink3); font-size: .88rem; margin-bottom: 20px; line-height: 1.5; }
+    .delname { color: var(--ink); font-weight: 600; }
+    .delacts { display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* ── Toast ───────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 22px; right: 22px;
+      background: var(--ink); color: #fff;
+      border-radius: var(--r); padding: 11px 16px;
+      font-size: .82rem; font-weight: 500;
+      opacity: 0; transform: translateY(8px);
+      transition: opacity .2s, transform .2s;
+      z-index: 999; pointer-events: none;
+      box-shadow: var(--shadow-m);
+    }
+    .toast.on { opacity: 1; transform: translateY(0); }
+    .t-ok  { background: #1E8449; }
+    .t-err { background: #C0392B; }
+
+    /* ── Error banner ────────────────────────────────────────── */
+    .err-banner {
+      display: none;
+      background: #FDECEA; border: 1px solid #F5B7B1;
+      border-radius: var(--r); padding: 12px 16px;
+      font-size: .83rem; color: #922B21;
+      margin-bottom: 16px; grid-column: 1/-1;
+    }
+    .err-banner.on { display: block; }
+
+    /* ── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 1040px) {
+      .wrap { grid-template-columns: 1fr; }
+      .aside { grid-row: 4; }
+      .hid { display: none; }
+    }
+    @media (max-width: 640px) {
+      .wrap { padding: 14px; gap: 14px; }
+      .header { padding: 0 16px; }
+      .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .fgrid, .dgrid { grid-template-columns: 1fr; }
+      .brand-sep, .brand-sub { display: none; }
+      .page-title h1 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="brand">
+    <svg class="brand-logo" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="28" height="28" rx="7" fill="#D4590A"/>
+      <path d="M14 6L20 20H8L14 6Z" fill="white" opacity=".9"/>
+      <path d="M14 10L17.5 18H10.5L14 10Z" fill="#D4590A"/>
+    </svg>
+    <span class="brand-wordmark">Conf<em>erences</em></span>
+    <div class="brand-sep"></div>
+    <span class="brand-sub">Tracker</span>
+  </div>
+  <div class="hdr-right">
+    <span class="upd-label" id="upd"></span>
+    <button class="btn btn-ghost btn-sm" id="btnRefresh">↺ Refresh</button>
+    <button class="btn btn-primary btn-sm" id="btnNew">+ New</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- Page title -->
+  <div class="page-title">
+    <h1>My <em>Conferences</em></h1>
+  </div>
+
+  <!-- Error -->
+  <div class="err-banner" id="errBanner"></div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <span class="slabel">Total</span>
+      <span class="sval" id="sTotal">—</span>
+    </div>
+    <div class="stat s-yes">
+      <span class="slabel">Interested</span>
+      <span class="sval" id="sYes">—</span>
+    </div>
+    <div class="stat s-neu">
+      <span class="slabel">Considering</span>
+      <span class="sval" id="sNeu">—</span>
+    </div>
+    <div class="stat s-due">
+      <span class="slabel">Due ≤ 30d</span>
+      <span class="sval" id="sDue">—</span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <section class="card">
+    <div class="toolbar">
+      <div class="srch">
+        <input id="search" type="text" placeholder="Search by name, location, year…" autocomplete="off">
+      </div>
+      <select id="fltInterest" class="flt">
+        <option value="">All Interest Levels</option>
+        <option value="Yes">Yes</option>
+        <option value="Neutral">Neutral</option>
+        <option value="Too early">Too Early</option>
+        <option value="Overlapped">Overlapped</option>
+        <option value="Past">Past</option>
+        <option value="No">No</option>
+      </select>
+    </div>
+    <div class="twrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-s="Name">Conference</th>
+            <th data-s="Interest">Interest</th>
+            <th data-s="Submission">Submission Deadline</th>
+            <th>Location</th>
+            <th data-s="Conference Begin" class="hid">Conference Dates</th>
+            <th class="hid">Format</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="empty">
+        <div class="empty-icon">🔍</div>
+        <p>No conferences match your filters.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sidebar -->
+  <aside class="aside">
+    <div class="scard">
+      <div class="shead">
+        <div class="shead-dot"></div>
+        Upcoming Deadlines
+      </div>
+      <div class="dpanel" id="dpanel"></div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- View Modal -->
+<div class="ov" id="ovView">
+  <div class="modal">
+    <div class="mhdr">
+      <h2 id="vTitle"></h2>
+      <button class="mx" data-close="ovView">✕</button>
+    </div>
+    <div class="mbody" id="vBody"></div>
+  </div>
+</div>
+
+<!-- Form Modal -->
+<div class="ov" id="ovForm">
+  <div class="modal">
+    <div class="mhdr">
+      <h2 id="fTitle">Conference</h2>
+      <button class="mx" data-close="ovForm">✕</button>
+    </div>
+    <div class="mbody">
+      <div id="fForm"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="ov" id="ovDel">
+  <div class="modal">
+    <div class="mhdr">
+      <h2>Delete Conference</h2>
+      <button class="mx" data-close="ovDel">✕</button>
+    </div>
+    <div class="delbody">
+      <p>Are you sure you want to delete <span class="delname" id="delName"></span>? This action cannot be undone.</p>
+      <div class="delacts">
+        <button class="btn btn-ghost btn-sm" data-close="ovDel">Cancel</button>
+        <button class="btn btn-danger btn-sm" id="btnDelConfirm">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config — replace with your Apps Script /exec URL ─────────
+const API = 'YOUR_APPS_SCRIPT_URL';
+
+// ── Interest styles ───────────────────────────────────────────
+const IPILL = {
+  'Yes':        'p-yes',
+  'Neutral':    'p-neutral',
+  'Too early':  'p-early',
+  'Overlapped': 'p-overlap',
+  'Past':       'p-past',
+  'No':         'p-no',
+};
+const ISORT = ['Yes','Neutral','Too early','Overlapped','Past','No'];
+
+// ── State ─────────────────────────────────────────────────────
+let all = [], loading = false;
+let sortF = 'Submission', sortD = 'asc';
+let fSearch = '', fInterest = '';
+
+// ── Date helpers ──────────────────────────────────────────────
+const pd    = s => s ? new Date(s.replace(/\//g, '-')) : null;
+const daysUntil = s => { const d = pd(s); return d ? Math.floor((d - Date.now()) / 86400000) : null; };
+const fmtD  = s => {
+  const d = pd(s); if (!d || isNaN(d)) return s || '—';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+function badge(sub) {
+  const n = daysUntil(sub); if (n === null) return '';
+  if (n < 0)  return `<span class="badge bd-past">Closed</span>`;
+  if (n === 0)return `<span class="badge bd-urgent">Today!</span>`;
+  if (n <= 7) return `<span class="badge bd-urgent">${n}d left</span>`;
+  if (n <= 30)return `<span class="badge bd-soon">${n}d left</span>`;
+  return `<span class="badge bd-ok">${n}d</span>`;
+}
+
+// ── API calls ─────────────────────────────────────────────────
+async function apiFetch(url, opts) {
+  const res = await fetch(url, opts);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+async function load() {
+  loading = true; render();
+  hideErr();
+  try {
+    const data = await apiFetch(`${API}?action=getAll`);
+    all = data.conferences || [];
+    document.getElementById('upd').textContent =
+      'Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  } catch (e) {
+    showErr(e.message);
+  } finally {
+    loading = false; render();
+  }
+}
+
+// ── Filtered + sorted ─────────────────────────────────────────
+function getFiltered() {
+  let list = all.slice();
+  if (fInterest) list = list.filter(c => c['Interest'] === fInterest);
+  if (fSearch) {
+    const q = fSearch.toLowerCase();
+    list = list.filter(c =>
+      (c['Name']||'').toLowerCase().includes(q) ||
+      (c['Location']||'').toLowerCase().includes(q) ||
+      String(c['Year']||'').includes(q)
+    );
+  }
+  list.sort((a, b) => {
+    let av = a[sortF]||'', bv = b[sortF]||'';
+    if (['Submission','Conference Begin','Conference End'].includes(sortF)) {
+      av = pd(av)||new Date(0); bv = pd(bv)||new Date(0);
+    } else if (sortF === 'Interest') {
+      av = ISORT.indexOf(av); bv = ISORT.indexOf(bv);
+    }
+    return (av < bv ? -1 : av > bv ? 1 : 0) * (sortD === 'asc' ? 1 : -1);
+  });
+  return list;
+}
+
+// ── Render ────────────────────────────────────────────────────
+function render() {
+  const filtered = getFiltered();
+  renderStats(); renderTable(filtered); renderDeadlines();
+}
+
+function renderStats() {
+  document.getElementById('sTotal').textContent = all.length || '—';
+  document.getElementById('sYes').textContent   = all.filter(c => c['Interest']==='Yes').length || '—';
+  document.getElementById('sNeu').textContent   = all.filter(c => c['Interest']==='Neutral').length || '—';
+  document.getElementById('sDue').textContent   = all.filter(c => {
+    const n = daysUntil(c['Submission']);
+    return n !== null && n >= 0 && n <= 30 &&
+      (c['Interest']==='Yes'||c['Interest']==='Neutral');
+  }).length || '—';
+}
+
+function renderTable(filtered) {
+  const tb = document.getElementById('tbody');
+  const em = document.getElementById('empty');
+
+  if (loading) {
+    tb.innerHTML = `<tr><td colspan="7" class="loadrow"><div class="spin"></div></td></tr>`;
+    em.style.display = 'none'; return;
+  }
+
+  if (!filtered.length) { tb.innerHTML = ''; em.style.display = 'flex'; return; }
+  em.style.display = 'none';
+
+  tb.innerHTML = filtered.map(c => {
+    const pc = IPILL[c['Interest']] || 'p-past';
+    return `<tr class="row" data-id="${c._id}" tabindex="0">
+      <td>
+        <span class="cname">${c['Name']||'—'}</span>
+        <span class="cyear">${c['Year']||''}</span>
+      </td>
+      <td><span class="pill ${pc}">${c['Interest']||'—'}</span></td>
+      <td>
+        <span class="ddate">${fmtD(c['Submission'])}</span>
+        ${badge(c['Submission'])}
+      </td>
+      <td class="dloc">${c['Location']||'—'}</td>
+      <td class="dconf hid">${fmtD(c['Conference Begin'])} – ${fmtD(c['Conference End'])}</td>
+      <td class="hid" style="font-size:.76rem;color:var(--ink4)">${c['Meeting']||'—'}</td>
+      <td>
+        <div class="acts">
+          <button class="ibtn" onclick="openEdit('${c._id}');event.stopPropagation()" title="Edit">✏️</button>
+          <button class="ibtn del" onclick="openDel('${c._id}');event.stopPropagation()" title="Delete">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  tb.querySelectorAll('.row').forEach(r => {
+    r.addEventListener('click', () => openView(r.dataset.id));
+    r.addEventListener('keydown', e => { if (e.key==='Enter') openView(r.dataset.id); });
+  });
+}
+
+function renderDeadlines() {
+  const panel = document.getElementById('dpanel');
+  const up = all.filter(c => {
+    const n = daysUntil(c['Submission']);
+    return n !== null && n >= 0 && n <= 60 &&
+      (c['Interest']==='Yes'||c['Interest']==='Neutral');
+  }).sort((a,b) => (pd(a['Submission'])||0)-(pd(b['Submission'])||0));
+
+  if (!up.length) {
+    panel.innerHTML = '<p class="nodl">No deadlines in the next 60 days.</p>'; return;
+  }
+
+  panel.innerHTML = up.map(c => {
+    const n = daysUntil(c['Submission']);
+    const cls = n <= 7 ? 'd-u' : n <= 30 ? 'd-s' : 'd-ok';
+    return `<div class="ditem ${cls}" onclick="openView('${c._id}')">
+      <div class="dl">
+        <span class="dn">${c['Name']} ${c['Year']}</span>
+        <span class="dloc2">${c['Location']||''}</span>
+      </div>
+      <div class="dr">
+        <span class="dd">${n}d</span>
+        <span class="ddt">${fmtD(c['Submission'])}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── View modal ────────────────────────────────────────────────
+function openView(id) {
+  const c = all.find(x => x._id === id); if (!c) return;
+  const pc = IPILL[c['Interest']] || 'p-past';
+  document.getElementById('vTitle').textContent = `${c['Name']} ${c['Year']}`;
+  document.getElementById('vBody').innerHTML = `
+    <div class="dgrid">
+      <div class="drow">
+        <span class="dlbl">Interest</span>
+        <span class="pill ${pc}">${c['Interest']||'—'}</span>
+      </div>
+      <div class="drow">
+        <span class="dlbl">Location</span>
+        <span class="dval">${c['Location']||'—'}</span>
+      </div>
+      <div class="drow">
+        <span class="dlbl">Submission Deadline</span>
+        <span class="dval">${fmtD(c['Submission'])} ${badge(c['Submission'])}</span>
+      </div>
+      <div class="drow">
+        <span class="dlbl">Conference Dates</span>
+        <span class="dval">${fmtD(c['Conference Begin'])} – ${fmtD(c['Conference End'])}</span>
+      </div>
+      <div class="drow">
+        <span class="dlbl">Format</span>
+        <span class="dval">${c['Meeting']||'—'}</span>
+      </div>
+    </div>
+    <div class="macts">
+      <button class="btn btn-outline-orange btn-sm" onclick="openEdit('${id}')">Edit</button>
+      <button class="btn btn-danger btn-sm" onclick="openDel('${id}')">Delete</button>
+    </div>`;
+  showModal('ovView');
+}
+
+// ── Form modal ────────────────────────────────────────────────
+function openEdit(id) {
+  const c = id ? all.find(x => x._id === id) : null;
+  document.getElementById('fTitle').textContent = c ? `Edit — ${c['Name']} ${c['Year']}` : 'New Conference';
+  const io = ['Yes','Neutral','Too early','Overlapped','Past','No'].map(k =>
+    `<option value="${k}"${c&&c['Interest']===k?' selected':''}>${k}</option>`).join('');
+  document.getElementById('fForm').innerHTML = `
+    <div class="fgrid">
+      <div class="fg">
+        <label>Name</label>
+        <input id="fName" type="text" value="${c?.['Name']||''}" placeholder="e.g. ICASSP">
+      </div>
+      <div class="fg">
+        <label>Year</label>
+        <input id="fYear" type="number" value="${c?.['Year']||new Date().getFullYear()+1}">
+      </div>
+      <div class="fg">
+        <label>Interest</label>
+        <select id="fInt">${io}</select>
+      </div>
+      <div class="fg">
+        <label>Location</label>
+        <input id="fLoc" type="text" value="${c?.['Location']||''}" placeholder="City, Country">
+      </div>
+      <div class="fg">
+        <label>Submission (yyyy/MM/dd)</label>
+        <input id="fSub" type="text" value="${c?.['Submission']||''}" placeholder="2026/09/01">
+      </div>
+      <div class="fg">
+        <label>Conf. Begin</label>
+        <input id="fBeg" type="text" value="${c?.['Conference Begin']||''}" placeholder="2026/12/07">
+      </div>
+      <div class="fg">
+        <label>Conf. End</label>
+        <input id="fEnd" type="text" value="${c?.['Conference End']||''}" placeholder="2026/12/11">
+      </div>
+      <div class="fg">
+        <label>Format</label>
+        <select id="fMtg">
+          <option${c?.['Meeting']==='In-person'?' selected':''}>In-person</option>
+          <option${c?.['Meeting']==='Hybrid'?' selected':''}>Hybrid</option>
+          <option${c?.['Meeting']==='Virtual'?' selected':''}>Virtual</option>
+        </select>
+      </div>
+    </div>
+    <div class="facts">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('ovForm')">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="btnSave">${c?'Save Changes':'Create'}</button>
+    </div>`;
+  document.getElementById('btnSave').addEventListener('click', () => saveConf(c?._id));
+  closeModal('ovView');
+  showModal('ovForm');
+}
+
+async function saveConf(id) {
+  const data = {
+    'Name':             document.getElementById('fName').value.trim(),
+    'Year':             document.getElementById('fYear').value.trim(),
+    'Interest':         document.getElementById('fInt').value,
+    'Location':         document.getElementById('fLoc').value.trim(),
+    'Submission':       document.getElementById('fSub').value.trim(),
+    'Conference Begin': document.getElementById('fBeg').value.trim(),
+    'Conference End':   document.getElementById('fEnd').value.trim(),
+    'Meeting':          document.getElementById('fMtg').value,
+  };
+  if (!data['Name']) { toast('Name is required', true); return; }
+
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    await apiFetch(API, {
+      method: 'POST',
+      body: JSON.stringify({ action: id ? 'update' : 'create', id, data })
+    });
+    closeModal('ovForm');
+    await load();
+    toast(id ? 'Conference updated ✓' : 'Conference created ✓');
+  } catch (e) {
+    toast('Error: ' + e.message, true);
+    btn.disabled = false;
+    btn.textContent = id ? 'Save Changes' : 'Create';
+  }
+}
+
+// ── Delete modal ──────────────────────────────────────────────
+function openDel(id) {
+  const c = all.find(x => x._id === id); if (!c) return;
+  document.getElementById('delName').textContent = `${c['Name']} ${c['Year']}`;
+  document.getElementById('btnDelConfirm').onclick = async () => {
+    try {
+      await apiFetch(API, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'delete', id })
+      });
+      closeModal('ovDel'); await load(); toast('Conference deleted');
+    } catch (e) { toast('Error: ' + e.message, true); }
+  };
+  closeModal('ovView');
+  showModal('ovDel');
+}
+
+// ── Modal helpers ─────────────────────────────────────────────
+function showModal(id) {
+  document.querySelectorAll('.ov').forEach(o => o.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('on');
+  if (!document.querySelector('.ov.on')) document.body.style.overflow = '';
+}
+document.querySelectorAll('[data-close]').forEach(el =>
+  el.addEventListener('click', () => closeModal(el.dataset.close))
+);
+document.querySelectorAll('.ov').forEach(ov =>
+  ov.addEventListener('click', e => { if (e.target === ov) closeModal(ov.id); })
+);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.ov.on').forEach(o => closeModal(o.id));
+});
+
+// ── Toast + error ─────────────────────────────────────────────
+let _tt;
+function toast(msg, err = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast on ${err ? 't-err' : 't-ok'}`;
+  clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('on'), 3200);
+}
+function showErr(msg) {
+  const el = document.getElementById('errBanner');
+  el.textContent = '⚠ Could not load data: ' + msg + ' — Check your Apps Script URL and deployment.';
+  el.classList.add('on');
+}
+function hideErr() { document.getElementById('errBanner').classList.remove('on'); }
+
+// ── Sort ──────────────────────────────────────────────────────
+document.querySelectorAll('th[data-s]').forEach(th =>
+  th.addEventListener('click', () => {
+    const f = th.dataset.s;
+    sortD = sortF === f ? (sortD === 'asc' ? 'desc' : 'asc') : 'asc';
+    sortF = f;
+    document.querySelectorAll('th[data-s]').forEach(h => h.classList.remove('sa','sd'));
+    th.classList.add(sortD === 'asc' ? 'sa' : 'sd');
+    render();
+  })
+);
+
+// ── Filters & controls ────────────────────────────────────────
+document.getElementById('search').addEventListener('input', e => { fSearch = e.target.value.trim(); render(); });
+document.getElementById('fltInterest').addEventListener('change', e => { fInterest = e.target.value; render(); });
+document.getElementById('btnRefresh').addEventListener('click', load);
+document.getElementById('btnNew').addEventListener('click', () => openEdit(null));
+
+// ── Service Worker ────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ── Init ──────────────────────────────────────────────────────
+load();
+</script>
+</body>
+</html>
